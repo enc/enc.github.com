@@ -1,0 +1,244 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Java on Jonatan Reiners - Thoughts</title>
+    <link>http://www.encc.de/tags/java/index.xml</link>
+    <description>Recent content in Java on Jonatan Reiners - Thoughts</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <copyright>&amp;copy; 2017 Jonatan Reiners</copyright>
+    <atom:link href="/tags/java/index.xml" rel="self" type="application/rss+xml" />
+    
+    <item>
+      <title>Using Azure KeyVault as property source in Spring Boot</title>
+      <link>http://www.encc.de/post/azure_keyvault_with_spring/</link>
+      <pubDate>Sun, 02 Apr 2017 17:04:45 +0200</pubDate>
+      
+      <guid>http://www.encc.de/post/azure_keyvault_with_spring/</guid>
+      <description>
+
+&lt;p&gt;In my current project we had first contact with the Azure Cloud. Azure offers the &lt;a href=&#34;https://azure.microsoft.com/en-us/services/key-vault/&#34; target=&#34;_blank&#34;&gt;KeyVault&lt;/a&gt; as their product to store secrets safely in the environment you deploy your services to. While it supports different scenarios, I was focussing my efforts on storing secrets and use it as a source for properties in my Spring Boot application.&lt;/p&gt;
+
+&lt;p&gt;When we are using the KeyVault we can store a minimum of secrets to access it in the immediate environment of the application. We can then retrieve all other required secrets from the KeyVault, where we have more control and a central location for our secrets.&lt;/p&gt;
+
+&lt;p&gt;First I will start with the implementation. Later I want to mention some considerations if you want to implement it too.&lt;/p&gt;
+
+&lt;h2 id=&#34;implementation&#34;&gt;Implementation&lt;/h2&gt;
+
+&lt;h3 id=&#34;connecting-to-the-keyvault&#34;&gt;Connecting to the KeyVault&lt;/h3&gt;
+
+&lt;p&gt;Since we are using Kotlin, we have to rely on the &lt;a href=&#34;https://github.com/Azure/azure-sdk-for-java&#34; target=&#34;_blank&#34;&gt;Java SDK for azure&lt;/a&gt;. I couldn&amp;rsquo;t find any good documentation that explains the authorization for the KeyVault part of the SDK. The reason is, that the SDK is developed by a very small team and just reached 1.0.0: a lot of documentation is outdated.&lt;/p&gt;
+
+&lt;p&gt;The main class to use is the &lt;code&gt;com.microsoft.azure.keyvault.KeyVaultClient&lt;/code&gt;. The constructor takes &lt;code&gt;com.microsoft.rest.credentials.ServiceClientCredentials&lt;/code&gt; but this is a trap and an example of inheritance gone wrong. In the whole SDK you will find several implementations of that interface but they will not necessarily work with the &lt;code&gt;KeyVaultClient&lt;/code&gt;. The implementor of the SDK did a good job of documenting the classes in the KeyVault package therefore a look at the &lt;a href=&#34;http://azure.github.io/azure-sdk-for-java/com/microsoft/azure/keyvault/authentication/KeyVaultCredentials.html&#34; target=&#34;_blank&#34;&gt;KeyVaultCredentials&lt;/a&gt; will reveal the solution. I did nothing else but implementing/copying this straight from the documentation.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;class KeyVaultCredentialsImpl : KeyVaultCredentials() {
+
+    override fun doAuthenticate(authorization: String, resource: String, s: String?): String {
+        val token = getAccessTokenFromClientCredentials(authorization, resource)
+        return token.accessToken
+    }
+
+    private fun getAccessTokenFromClientCredentials(authorization: String, resource: String): AuthenticationResult {
+        val context: AuthenticationContext
+        val result: AuthenticationResult?
+        var service: ExecutorService? = null
+        val c = KeyVaultConfiguration
+        try {
+            service = Executors.newFixedThreadPool(1)
+            context = AuthenticationContext(authorization, false, service!!)
+            val credentials = ClientCredential(c.clientId, c.clientKey)
+            val future = context.acquireToken(resource, credentials, null)
+            result = future.get()
+        } catch (e: Exception) {
+            throw RuntimeException(e)
+        } finally {
+            service!!.shutdown()
+        }
+
+        if (result == null) {
+            throw RuntimeException(&amp;quot;authentication result was null&amp;quot;)
+        }
+        return result
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;This class can be used to create an instance of the &lt;code&gt;KeyVaultClient&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;val kvClient = KeyVaultClient(KeyVaultCredentialsImpl())
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;The &lt;code&gt;KeyVaultConfiguration&lt;/code&gt; is pulling the &lt;em&gt;client id&lt;/em&gt; and &lt;em&gt;secret&lt;/em&gt; from the environment. This is the recommended way by Microsoft and you can use the &lt;a href=&#34;https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md#creating-a-service-principal-in-azure&#34; target=&#34;_blank&#34;&gt;following guide&lt;/a&gt; to generate them.&lt;/p&gt;
+
+&lt;h4 id=&#34;granting-access-to-keyvault&#34;&gt;Granting access to KeyVault&lt;/h4&gt;
+
+&lt;p&gt;I can recommend the &lt;a href=&#34;https://docs.microsoft.com/en-us/cli/azure/install-azure-cli&#34; target=&#34;_blank&#34;&gt;Azure CLI&lt;/a&gt; for the job.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;az key vault set-policy --name YourKeyVaultName \
+          --spn na692-your-service-priciple-client-id \
+          -g ResourceGroup \
+          --secret-permission get list
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Both operations implemented later require the &lt;em&gt;get&lt;/em&gt; and &lt;em&gt;list&lt;/em&gt; permissions.&lt;/p&gt;
+
+&lt;h3 id=&#34;registering-a-property-source-in-spring&#34;&gt;Registering a property source in spring&lt;/h3&gt;
+
+&lt;p&gt;While the process is actually very simple, I had a hard time finding all the bits and pieces of documentation and fit them together.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Step 1&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Create an initializer for Spring to load the property source.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;class KeyVaultPropertyInitializer : ApplicationContextInitializer&amp;lt;ConfigurableApplicationContext&amp;gt;, Ordered {
+
+    override fun initialize(context: ConfigurableApplicationContext) {
+        val kvClient = KeyVaultClient(KeyVaultCredentialsImpl())
+        val env = context.environment
+
+        try {
+            KeyVaultConfiguration.valid() // throws exception
+            env.propertySources.addFirst(KeyVaultPropertySource(KeyVaultOperations(kvClient)))
+        } catch (e: IllegalArgumentException) {
+            println(e.message)
+        }
+    }
+
+    override fun getOrder(): Int {
+        return Ordered.HIGHEST_PRECEDENCE + 10
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You implement the &lt;code&gt;initialize&lt;/code&gt; method where you create the &lt;code&gt;KeyVaultClient&lt;/code&gt;, then create your &lt;code&gt;KeyVaultPropertySource&lt;/code&gt; and register it as the first property source.&lt;/p&gt;
+
+&lt;p&gt;Being the first property source has the advantage that you can have development or fake values for your secrets in your config files, but if they are available in the KeyVault they will be overwritten. This is beneficial in the production environment, but can become confusing on your local machine. Microsoft allows you to connect to the KeyVault from any machine if you have the right credentials. So better keep this in mind!&lt;/p&gt;
+
+&lt;p&gt;I also want to run this initializer early in the process of starting up, since other libraries might expect secrets during their initialization process. The &lt;code&gt;+10&lt;/code&gt; on &lt;code&gt;getOrder()&lt;/code&gt; allows to sneak in another initializer to be first, but this should be done consciously.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Step 2&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Register the initializer for the Spring startup.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;public static void main(String[] args) {
+    new SpringApplicationBuilder(KcDemoApplication.class)
+            .initializers(new KeyVaultPropertyInitializer())
+            .run(args);
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Just use the builder, it&amp;rsquo;s straightforward.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Step 3&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Creating a property source is very easy. While there is a lot of documentation about different approaches and among the many good ways I found the following being very simple and effective. Implement &lt;code&gt;EnumerablePropertySource&lt;/code&gt;.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;class KeyVaultPropertySource(private val operations: KeyVaultOperations) : EnumerablePropertySource&amp;lt;KeyVaultOperations&amp;gt;(&amp;quot;kv&amp;quot;, operations) {
+
+    override fun getPropertyNames(): Array&amp;lt;String&amp;gt; {
+        val list = operations.list()
+        return list
+    }
+
+
+    override fun getProperty(name: String): Any? {
+        val property = operations.getProperty(name)
+        return property
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;You just have to implement these two methods. The function follows the name. It is important that &lt;code&gt;getProperty&lt;/code&gt; can return anything and has to return &lt;code&gt;null&lt;/code&gt; if the property cannot be resolved. The property source will be queried for every property since it is the first source. Nice behavior for any input is important here!&lt;/p&gt;
+
+&lt;p&gt;I was confused by the string and type cast of the enumerable source. The string &lt;code&gt;&amp;quot;kv&amp;quot;&lt;/code&gt; is important to identify the property source. You cannot add the same source twice.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Step 4&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;Implementing the actual operations on the KeyVault is the most interesting part. Luckily it&amp;rsquo;s pretty easy and you have few things to watch out for. Logic will stay simple. But let&amp;rsquo;s dive in, you will see.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;fun list(): Array&amp;lt;String&amp;gt; {
+
+    if (strings == null) {
+
+        strings = try {
+            val u = kvc.listSecrets(KeyVaultConfiguration.vaultUri)
+
+            u.stream()
+                    .map({ it.id() })
+                    .map({ it.removePrefix(&amp;quot;${sanitizeUri(KeyVaultConfiguration.vaultUri)}secrets/&amp;quot;) })
+                    .toArray({Array&amp;lt;String&amp;gt;(it, {i -&amp;gt; &amp;quot;&amp;quot;})})
+
+        } catch (e: Exception) {
+            arrayOf()
+        }
+
+    }
+    return strings as Array&amp;lt;String&amp;gt;
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;To create a list of secrets we are pulling all secrets from our KeyVault.&lt;/p&gt;
+
+&lt;p&gt;We will save this list in order to not ask the KeyVault too many times. Spring will query our source a lot since it has the highest priority. A little caching is very beneficial here.&lt;/p&gt;
+
+&lt;p&gt;We only need the &lt;code&gt;id&lt;/code&gt; of the secret for processing. You can do some filtering before if you like.&lt;/p&gt;
+
+&lt;p&gt;The &lt;code&gt;id&lt;/code&gt; will be the actual name of the secret plus the full URL of the KeyVault. We will clean it. Be careful (case-insensitive) here since the URL will be derived from the name which is case sensitive and you will find different styles throughout the fields of your requests to Azure.&lt;/p&gt;
+
+&lt;p&gt;In case of an error I will just save an empty list. This is a fast and easy solution. It will render all queries unsuccessful with very little effort.&lt;/p&gt;
+
+&lt;p&gt;The actual collection of the values is lazy compared to fetching the available keys. This is not the optimal solution but sufficient.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;fun sanitizeUri(uri: String?): String {
+    if (uri != null &amp;amp;&amp;amp; uri.matches(&amp;quot;.*/$&amp;quot;.toRegex())) {
+        return uri
+    } else {
+        return &amp;quot;${uri}/&amp;quot;
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;If you haven&amp;rsquo;t seen this little helper before: I want to make sure, that there is always a slash in the end since users might omit it in the configuration.&lt;/p&gt;
+
+&lt;pre&gt;&lt;code&gt;fun getProperty(path: String): Any? {
+    var name: String = path.replace(&amp;quot;\\.&amp;quot;.toRegex(), &amp;quot;--&amp;quot;)
+
+    if (Arrays.asList(*list()).contains(name)) {
+        try {
+
+            return kvc.getSecret(KeyVaultConfiguration.vaultUri, name).value()
+
+        } catch (e: KeyVaultErrorException) {
+            return null
+        }
+
+    } else {
+        return null
+    }
+}
+&lt;/code&gt;&lt;/pre&gt;
+
+&lt;p&gt;Since KeyVault doesn&amp;rsquo;t support &lt;code&gt;.&lt;/code&gt; in the name of a secret we will replace the &lt;code&gt;.&lt;/code&gt; with a &lt;code&gt;--&lt;/code&gt; in the requested secret. With this replacement we are able to store any property in the KeyVault since we can map the typical property format to KeyVault names.&lt;/p&gt;
+
+&lt;p&gt;We will also check the cached list first to avoid unnecessary calls to the API.&lt;/p&gt;
+
+&lt;p&gt;If successful we return the value and &lt;code&gt;null&lt;/code&gt; in any other case.&lt;/p&gt;
+
+&lt;h2 id=&#34;thoughts-on-architecture&#34;&gt;Thoughts on architecture&lt;/h2&gt;
+
+&lt;p&gt;We have built a very simple service. The simplicity makes it already kind of robust but also limits its functionality.&lt;/p&gt;
+
+&lt;p&gt;You should consider the following aspects if you want to implement your own solution.&lt;/p&gt;
+
+&lt;ol&gt;
+&lt;li&gt;The list of values is only fetched in the beginning. While this is good enough for most cases you may want to refresh after a while. Fetching values already supports properties added later because it&amp;rsquo;s lazy.&lt;/li&gt;
+&lt;li&gt;This implementation fails silently even without log message. You may want to be more verbose or add an option to fail hard. In production you may want your service to fail if you can&amp;rsquo;t fetch the secrets for any reason.&lt;/li&gt;
+&lt;li&gt;You can also store more complex data in the KeyVault. My implementation does not support it, but yours maybe should.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;Have fun! I hope you enjoyed reading this, learned a little and I could save you some time finding out how to work with Azure.&lt;/p&gt;
+</description>
+    </item>
+    
+  </channel>
+</rss>

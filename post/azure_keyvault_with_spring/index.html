@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="theme" content="hugo-academic">
+  <meta name="generator" content="Hugo 0.19" />
+  <meta name="author" content="Jonatan Reiners">
+  <meta name="description" content="Senior IT Consultant">
+
+  
+  
+  
+    
+  
+  
+    
+    
+    <link rel="stylesheet" href="/css/highlight.min.css">
+    
+  
+  <link rel="stylesheet" href="/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/css/font-awesome.min.css">
+  <link rel="stylesheet" href="/css/academicons.min.css">
+  <link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:400,700|Merriweather|Roboto+Mono">
+  <link rel="stylesheet" href="/css/hugo-academic.css">
+  
+
+  <link rel="alternate" href="http://www.encc.de/index.xml" type="application/rss+xml" title="Jonatan Reiners - Thoughts">
+  <link rel="feed" href="http://www.encc.de/index.xml" type="application/rss+xml" title="Jonatan Reiners - Thoughts">
+
+  <link rel="icon" type="image/png" href="/img/icon.png">
+  <link rel="apple-touch-icon" type="image/png" href="/img/apple-touch-icon.png">
+
+  <link rel="canonical" href="http://www.encc.de/post/azure_keyvault_with_spring/">
+
+  
+
+  <title>Using Azure KeyVault as property source in Spring Boot | Jonatan Reiners - Thoughts</title>
+
+</head>
+<body id="top" data-spy="scroll" data-target="#navbar-main" data-offset="71">
+
+<nav class="navbar navbar-default navbar-fixed-top" id="navbar-main">
+  <div class="container">
+
+    
+    <div class="navbar-header">
+      <button type="button" class="navbar-toggle collapsed" data-toggle="collapse"
+              data-target=".navbar-collapse" aria-expanded="false">
+        <span class="sr-only">Toggle navigation</span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+        <span class="icon-bar"></span>
+      </button>
+      <a class="navbar-brand" href="/">Jonatan Reiners - Thoughts</a>
+    </div>
+
+    
+    <div class="collapse navbar-collapse">
+
+      
+      <ul class="nav navbar-nav navbar-right">
+        
+
+        
+
+        <li class="nav-item">
+          <a href="/#posts">
+            
+            <span>Posts</span>
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        <li class="nav-item">
+          <a href="/#about">
+            
+            <span>About</span>
+          </a>
+        </li>
+
+        
+        
+
+        
+
+        <li class="nav-item">
+          <a href="/#contact">
+            
+            <span>Contact</span>
+          </a>
+        </li>
+
+        
+        
+      </ul>
+
+    </div>
+  </div>
+</nav>
+
+
+<article class="article" itemscope itemtype="http://schema.org/Article">
+
+  
+  <div class="article-header">
+    <img src="/img//headers/KotlinAzureHeader.png" class="article-banner" itemprop="image">
+    <span class="article-header-caption">KeyVault with Spring</span>
+  </div>
+  
+
+  <div class="article-container">
+    <h1 itemprop="name">Using Azure KeyVault as property source in Spring Boot</h1>
+    
+
+<div class="article-metadata">
+
+  <span class="article-date">
+    <time datetime="2017-04-02 17:04:45 &#43;0200 CEST" itemprop="datePublished">
+      Sun, 2 Apr 2017
+    </time>
+  </span>
+
+  
+  
+  
+  <span class="article-categories">
+    <i class="fa fa-folder"></i>
+    
+    <a href="/categories/coding">Coding</a
+    >, 
+    
+    <a href="/categories/azure">Azure</a
+    >
+    
+  </span>
+  
+  
+
+  
+  
+  
+  <span class="article-tags">
+    <i class="fa fa-tags"></i>
+    
+    <a href="/tags/spring">spring</a
+    >, 
+    
+    <a href="/tags/azure">azure</a
+    >, 
+    
+    <a href="/tags/keyvault">keyvault</a
+    >, 
+    
+    <a href="/tags/java">java</a
+    >, 
+    
+    <a href="/tags/kotlin">kotlin</a
+    >
+    
+  </span>
+  
+  
+
+  
+  
+<div class="share-box" aria-hidden="true">
+  <ul class="share">
+    <li>
+      <a class="facebook"
+         href="https://www.facebook.com/sharer.php?u=http%3a%2f%2fwww.encc.de%2fpost%2fazure_keyvault_with_spring%2f"
+         target="_blank">
+        <i class="fa fa-facebook"></i>
+      </a>
+    </li>
+    <li>
+      <a class="twitter"
+         href="https://twitter.com/intent/tweet?text=Using%20Azure%20KeyVault%20as%20property%20source%20in%20Spring%20Boot&amp;url=http%3a%2f%2fwww.encc.de%2fpost%2fazure_keyvault_with_spring%2f"
+         target="_blank">
+        <i class="fa fa-twitter"></i>
+      </a>
+    </li>
+    <li>
+      <a class="linkedin"
+         href="https://www.linkedin.com/shareArticle?mini=true&amp;url=http%3a%2f%2fwww.encc.de%2fpost%2fazure_keyvault_with_spring%2f&amp;title=Using%20Azure%20KeyVault%20as%20property%20source%20in%20Spring%20Boot"
+         target="_blank">
+        <i class="fa fa-linkedin"></i>
+      </a>
+    </li>
+    <li>
+      <a class="weibo"
+         href="http://service.weibo.com/share/share.php?url=http%3a%2f%2fwww.encc.de%2fpost%2fazure_keyvault_with_spring%2f&amp;title=Using%20Azure%20KeyVault%20as%20property%20source%20in%20Spring%20Boot"
+         target="_blank">
+        <i class="fa fa-weibo"></i>
+      </a>
+    </li>
+    <li>
+      <a class="email"
+         href="mailto:?subject=Using%20Azure%20KeyVault%20as%20property%20source%20in%20Spring%20Boot&amp;body=http%3a%2f%2fwww.encc.de%2fpost%2fazure_keyvault_with_spring%2f">
+        <i class="fa fa-envelope"></i>
+      </a>
+    </li>
+  </ul>
+</div>
+
+
+  
+
+</div>
+
+    <div class="article-style" itemprop="articleBody">
+      
+
+<p>In my current project we had first contact with the Azure Cloud. Azure offers the <a href="https://azure.microsoft.com/en-us/services/key-vault/" target="_blank">KeyVault</a> as their product to store secrets safely in the environment you deploy your services to. While it supports different scenarios, I was focussing my efforts on storing secrets and use it as a source for properties in my Spring Boot application.</p>
+
+<p>When we are using the KeyVault we can store a minimum of secrets to access it in the immediate environment of the application. We can then retrieve all other required secrets from the KeyVault, where we have more control and a central location for our secrets.</p>
+
+<p>First I will start with the implementation. Later I want to mention some considerations if you want to implement it too.</p>
+
+<h2 id="implementation">Implementation</h2>
+
+<h3 id="connecting-to-the-keyvault">Connecting to the KeyVault</h3>
+
+<p>Since we are using Kotlin, we have to rely on the <a href="https://github.com/Azure/azure-sdk-for-java" target="_blank">Java SDK for azure</a>. I couldn&rsquo;t find any good documentation that explains the authorization for the KeyVault part of the SDK. The reason is, that the SDK is developed by a very small team and just reached 1.0.0: a lot of documentation is outdated.</p>
+
+<p>The main class to use is the <code>com.microsoft.azure.keyvault.KeyVaultClient</code>. The constructor takes <code>com.microsoft.rest.credentials.ServiceClientCredentials</code> but this is a trap and an example of inheritance gone wrong. In the whole SDK you will find several implementations of that interface but they will not necessarily work with the <code>KeyVaultClient</code>. The implementor of the SDK did a good job of documenting the classes in the KeyVault package therefore a look at the <a href="http://azure.github.io/azure-sdk-for-java/com/microsoft/azure/keyvault/authentication/KeyVaultCredentials.html" target="_blank">KeyVaultCredentials</a> will reveal the solution. I did nothing else but implementing/copying this straight from the documentation.</p>
+
+<pre><code>class KeyVaultCredentialsImpl : KeyVaultCredentials() {
+
+    override fun doAuthenticate(authorization: String, resource: String, s: String?): String {
+        val token = getAccessTokenFromClientCredentials(authorization, resource)
+        return token.accessToken
+    }
+
+    private fun getAccessTokenFromClientCredentials(authorization: String, resource: String): AuthenticationResult {
+        val context: AuthenticationContext
+        val result: AuthenticationResult?
+        var service: ExecutorService? = null
+        val c = KeyVaultConfiguration
+        try {
+            service = Executors.newFixedThreadPool(1)
+            context = AuthenticationContext(authorization, false, service!!)
+            val credentials = ClientCredential(c.clientId, c.clientKey)
+            val future = context.acquireToken(resource, credentials, null)
+            result = future.get()
+        } catch (e: Exception) {
+            throw RuntimeException(e)
+        } finally {
+            service!!.shutdown()
+        }
+
+        if (result == null) {
+            throw RuntimeException(&quot;authentication result was null&quot;)
+        }
+        return result
+    }
+}
+</code></pre>
+
+<p>This class can be used to create an instance of the <code>KeyVaultClient</code>.</p>
+
+<pre><code>val kvClient = KeyVaultClient(KeyVaultCredentialsImpl())
+</code></pre>
+
+<p>The <code>KeyVaultConfiguration</code> is pulling the <em>client id</em> and <em>secret</em> from the environment. This is the recommended way by Microsoft and you can use the <a href="https://github.com/Azure/azure-sdk-for-java/blob/master/AUTH.md#creating-a-service-principal-in-azure" target="_blank">following guide</a> to generate them.</p>
+
+<h4 id="granting-access-to-keyvault">Granting access to KeyVault</h4>
+
+<p>I can recommend the <a href="https://docs.microsoft.com/en-us/cli/azure/install-azure-cli" target="_blank">Azure CLI</a> for the job.</p>
+
+<pre><code>az key vault set-policy --name YourKeyVaultName \
+          --spn na692-your-service-priciple-client-id \
+          -g ResourceGroup \
+          --secret-permission get list
+</code></pre>
+
+<p>Both operations implemented later require the <em>get</em> and <em>list</em> permissions.</p>
+
+<h3 id="registering-a-property-source-in-spring">Registering a property source in spring</h3>
+
+<p>While the process is actually very simple, I had a hard time finding all the bits and pieces of documentation and fit them together.</p>
+
+<p><strong>Step 1</strong></p>
+
+<p>Create an initializer for Spring to load the property source.</p>
+
+<pre><code>class KeyVaultPropertyInitializer : ApplicationContextInitializer&lt;ConfigurableApplicationContext&gt;, Ordered {
+
+    override fun initialize(context: ConfigurableApplicationContext) {
+        val kvClient = KeyVaultClient(KeyVaultCredentialsImpl())
+        val env = context.environment
+
+        try {
+            KeyVaultConfiguration.valid() // throws exception
+            env.propertySources.addFirst(KeyVaultPropertySource(KeyVaultOperations(kvClient)))
+        } catch (e: IllegalArgumentException) {
+            println(e.message)
+        }
+    }
+
+    override fun getOrder(): Int {
+        return Ordered.HIGHEST_PRECEDENCE + 10
+    }
+}
+</code></pre>
+
+<p>You implement the <code>initialize</code> method where you create the <code>KeyVaultClient</code>, then create your <code>KeyVaultPropertySource</code> and register it as the first property source.</p>
+
+<p>Being the first property source has the advantage that you can have development or fake values for your secrets in your config files, but if they are available in the KeyVault they will be overwritten. This is beneficial in the production environment, but can become confusing on your local machine. Microsoft allows you to connect to the KeyVault from any machine if you have the right credentials. So better keep this in mind!</p>
+
+<p>I also want to run this initializer early in the process of starting up, since other libraries might expect secrets during their initialization process. The <code>+10</code> on <code>getOrder()</code> allows to sneak in another initializer to be first, but this should be done consciously.</p>
+
+<p><strong>Step 2</strong></p>
+
+<p>Register the initializer for the Spring startup.</p>
+
+<pre><code>public static void main(String[] args) {
+    new SpringApplicationBuilder(KcDemoApplication.class)
+            .initializers(new KeyVaultPropertyInitializer())
+            .run(args);
+}
+</code></pre>
+
+<p>Just use the builder, it&rsquo;s straightforward.</p>
+
+<p><strong>Step 3</strong></p>
+
+<p>Creating a property source is very easy. While there is a lot of documentation about different approaches and among the many good ways I found the following being very simple and effective. Implement <code>EnumerablePropertySource</code>.</p>
+
+<pre><code>class KeyVaultPropertySource(private val operations: KeyVaultOperations) : EnumerablePropertySource&lt;KeyVaultOperations&gt;(&quot;kv&quot;, operations) {
+
+    override fun getPropertyNames(): Array&lt;String&gt; {
+        val list = operations.list()
+        return list
+    }
+
+
+    override fun getProperty(name: String): Any? {
+        val property = operations.getProperty(name)
+        return property
+    }
+}
+</code></pre>
+
+<p>You just have to implement these two methods. The function follows the name. It is important that <code>getProperty</code> can return anything and has to return <code>null</code> if the property cannot be resolved. The property source will be queried for every property since it is the first source. Nice behavior for any input is important here!</p>
+
+<p>I was confused by the string and type cast of the enumerable source. The string <code>&quot;kv&quot;</code> is important to identify the property source. You cannot add the same source twice.</p>
+
+<p><strong>Step 4</strong></p>
+
+<p>Implementing the actual operations on the KeyVault is the most interesting part. Luckily it&rsquo;s pretty easy and you have few things to watch out for. Logic will stay simple. But let&rsquo;s dive in, you will see.</p>
+
+<pre><code>fun list(): Array&lt;String&gt; {
+
+    if (strings == null) {
+
+        strings = try {
+            val u = kvc.listSecrets(KeyVaultConfiguration.vaultUri)
+
+            u.stream()
+                    .map({ it.id() })
+                    .map({ it.removePrefix(&quot;${sanitizeUri(KeyVaultConfiguration.vaultUri)}secrets/&quot;) })
+                    .toArray({Array&lt;String&gt;(it, {i -&gt; &quot;&quot;})})
+
+        } catch (e: Exception) {
+            arrayOf()
+        }
+
+    }
+    return strings as Array&lt;String&gt;
+}
+</code></pre>
+
+<p>To create a list of secrets we are pulling all secrets from our KeyVault.</p>
+
+<p>We will save this list in order to not ask the KeyVault too many times. Spring will query our source a lot since it has the highest priority. A little caching is very beneficial here.</p>
+
+<p>We only need the <code>id</code> of the secret for processing. You can do some filtering before if you like.</p>
+
+<p>The <code>id</code> will be the actual name of the secret plus the full URL of the KeyVault. We will clean it. Be careful (case-insensitive) here since the URL will be derived from the name which is case sensitive and you will find different styles throughout the fields of your requests to Azure.</p>
+
+<p>In case of an error I will just save an empty list. This is a fast and easy solution. It will render all queries unsuccessful with very little effort.</p>
+
+<p>The actual collection of the values is lazy compared to fetching the available keys. This is not the optimal solution but sufficient.</p>
+
+<pre><code>fun sanitizeUri(uri: String?): String {
+    if (uri != null &amp;&amp; uri.matches(&quot;.*/$&quot;.toRegex())) {
+        return uri
+    } else {
+        return &quot;${uri}/&quot;
+    }
+}
+</code></pre>
+
+<p>If you haven&rsquo;t seen this little helper before: I want to make sure, that there is always a slash in the end since users might omit it in the configuration.</p>
+
+<pre><code>fun getProperty(path: String): Any? {
+    var name: String = path.replace(&quot;\\.&quot;.toRegex(), &quot;--&quot;)
+
+    if (Arrays.asList(*list()).contains(name)) {
+        try {
+
+            return kvc.getSecret(KeyVaultConfiguration.vaultUri, name).value()
+
+        } catch (e: KeyVaultErrorException) {
+            return null
+        }
+
+    } else {
+        return null
+    }
+}
+</code></pre>
+
+<p>Since KeyVault doesn&rsquo;t support <code>.</code> in the name of a secret we will replace the <code>.</code> with a <code>--</code> in the requested secret. With this replacement we are able to store any property in the KeyVault since we can map the typical property format to KeyVault names.</p>
+
+<p>We will also check the cached list first to avoid unnecessary calls to the API.</p>
+
+<p>If successful we return the value and <code>null</code> in any other case.</p>
+
+<h2 id="thoughts-on-architecture">Thoughts on architecture</h2>
+
+<p>We have built a very simple service. The simplicity makes it already kind of robust but also limits its functionality.</p>
+
+<p>You should consider the following aspects if you want to implement your own solution.</p>
+
+<ol>
+<li>The list of values is only fetched in the beginning. While this is good enough for most cases you may want to refresh after a while. Fetching values already supports properties added later because it&rsquo;s lazy.</li>
+<li>This implementation fails silently even without log message. You may want to be more verbose or add an option to fail hard. In production you may want your service to fail if you can&rsquo;t fetch the secrets for any reason.</li>
+<li>You can also store more complex data in the KeyVault. My implementation does not support it, but yours maybe should.</li>
+</ol>
+
+<p>Have fun! I hope you enjoyed reading this, learned a little and I could save you some time finding out how to work with Azure.</p>
+
+    </div>
+  </div>
+
+</article>
+
+<div class="container">
+  <nav>
+  <ul class="pager">
+    
+
+    
+  </ul>
+</nav>
+
+</div>
+
+<div class="article-container">
+  
+<section id="comments">
+  <div id="disqus_thread">
+    <div id="disqus_thread"></div>
+<script type="text/javascript">
+    var disqus_shortname = 'jonatanreiners';
+    var disqus_identifier = 'http:\/\/www.encc.de\/post\/azure_keyvault_with_spring\/';
+    var disqus_title = 'Using Azure KeyVault as property source in Spring Boot';
+    var disqus_url = 'http:\/\/www.encc.de\/post\/azure_keyvault_with_spring\/';
+
+    (function() {
+        var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+        dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+        (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    })();
+</script>
+<noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+<a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+  </div>
+</section>
+
+
+</div>
+
+<footer class="site-footer">
+  <div class="container">
+    <p class="powered-by">
+
+      &copy; 2017 Jonatan Reiners &middot; 
+
+      Powered by the <a href="https://github.com/gcushen/hugo-academic" target="_blank">Academic
+      theme</a> for <a href="http://gohugo.io" target="_blank">Hugo</a>.
+
+      <span class="pull-right" aria-hidden="true">
+        <a href="#" id="back_to_top">
+          <span class="button_icon">
+            <i class="fa fa-chevron-up fa-2x"></i>
+          </span>
+        </a>
+      </span>
+
+    </p>
+  </div>
+</footer>
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/gsap/1.18.4/TweenMax.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/gsap/latest/plugins/ScrollToPlugin.min.js"></script>
+    <script src="/js/jquery-1.12.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="/js/isotope.pkgd.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery.imagesloaded/4.1.1/imagesloaded.pkgd.min.js"></script>
+    <script src="/js/hugo-academic.js"></script>
+    
+
+    
+    <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+        (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+        m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+        ga('create', 'UA-21266737-1', 'auto');
+        ga('send', 'pageview');
+
+         
+        var links = document.querySelectorAll('a');
+        Array.prototype.map.call(links, function(item) {
+            if (item.host != document.location.host) {
+                item.addEventListener('click', function() {
+                    var action = item.getAttribute('data-action') || 'follow';
+                    ga('send', 'event', 'outbound', action, item.href);
+                });
+            }
+        });
+    </script>
+    
+
+    
+    
+      
+      <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.9.0/highlight.min.js"></script>
+
+      
+
+      
+
+      <script>hljs.initHighlightingOnLoad();</script>
+    
+
+    
+    
+
+  </body>
+</html>
+
